@@ -25,41 +25,31 @@ pub fn is_unicode(slice: &[u8]) -> bool {
             return false;
         }
         let third_bit = get_bit_at(number, 5);
-        if !third_bit {
-            // 110xxxxx 10xxxxxx
-            return match &iter.next() {
-                Some(&i) => {
-                    if is_10x(i) {
-                        continue;
-                    }
-                    false
-                }
-                None => {
-                    false
-                }
-            };
-        }
         let fourth_bit = get_bit_at(number, 4);
-        if !fourth_bit {
-            // 1110xxxx 10xxxxxx 10xxxxxx
-            return match (iter.next(), iter.next()) {
-                (Some(&i1), Some(&i2)) => {
-                    if is_10x(i1) && is_10x(i2) {
-                        continue;
-                    }
-                    false
-                }
-                _ => {
-                    false
-                }
-            };
-        }
         let fifth_bit = get_bit_at(number, 3);
-        if fifth_bit {
-            return false;
-        }
-        return match (iter.next(), iter.next(), iter.next()) {
-            (Some(&i1), Some(&i2),  Some(&i3)) => {
+        let items = match (third_bit, fourth_bit, fifth_bit) {
+            (false, _, _) => (iter.next(), None, None),
+            (_, false, _) => (iter.next(), iter.next(), None),
+            (_, _, false) => (iter.next(), iter.next(), iter.next()),
+            _ => {
+                return false;
+            }
+        };
+
+        return match items {
+            (Some(&i1), None, None) if !third_bit => {
+                if is_10x(i1) {
+                    continue;
+                }
+                false
+            }
+            (Some(&i1), Some(&i2), None) if !fourth_bit => {
+                if is_10x(i1) && is_10x(i2) {
+                    continue;
+                }
+                false
+            }
+            (Some(&i1), Some(&i2), Some(&i3)) if !fifth_bit => {
                 if is_10x(i1) && is_10x(i2) && is_10x(i3) {
                     continue;
                 }
@@ -86,15 +76,15 @@ mod tests {
         assert_eq!(is_unicode(slice), true);
     }
 
-    //    #[test]
-    //    fn it_works() {
-    //        let bytes = [197, 130, 1];
-    //        assert_eq!(is_unicode(&bytes), true);
-    //    }
-    //
-    //    #[test]
-    //    fn it_fails() {
-    //        let bytes = [235, 140, 4];
-    //        assert_eq!(is_unicode(&bytes), false);
-    //    }
+    #[test]
+    fn it_works() {
+        let bytes = [197, 130, 1];
+        assert_eq!(is_unicode(&bytes), true);
+    }
+
+    #[test]
+    fn it_fails() {
+        let bytes = [235, 140, 4];
+        assert_eq!(is_unicode(&bytes), false);
+    }
 }
