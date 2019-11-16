@@ -1,9 +1,7 @@
-#[inline]
 fn get_bit_at(input: u8, n: u8) -> bool {
     input & (1 << n) != 0
 }
 
-#[inline]
 fn is_10x(input: u8) -> bool {
     let bit1 = get_bit_at(input, 7);
     let bit2 = get_bit_at(input, 6);
@@ -13,13 +11,12 @@ fn is_10x(input: u8) -> bool {
 // from https://helloacm.com/how-to-validate-utf-8-encoding-the-simple-utf-8-validation-algorithm/
 
 pub fn is_unicode(slice: &[u8]) -> bool {
-    let mut idx = 0;
-    while idx < slice.len() {
-        let number = slice[idx];
+    let mut iter = slice.iter();
+    while let Some(&number) = iter.next() {
         // 0xxxxxxx
         let first_bit = get_bit_at(number, 7);
         if !first_bit {
-            idx += 1;
+            // Skip 1
             continue;
         }
         // 110xxxxx 10xxxxxx
@@ -30,42 +27,48 @@ pub fn is_unicode(slice: &[u8]) -> bool {
         let third_bit = get_bit_at(number, 5);
         if !third_bit {
             // 110xxxxx 10xxxxxx
-            if idx + 1 < slice.len() {
-                if is_10x(slice[idx + 1]) {
-                    idx += 2;
-                    continue;
+            return match &iter.next() {
+                Some(&i) => {
+                    if is_10x(i) {
+                        continue;
+                    }
+                    false
                 }
-                return false;
-            } else {
-                return false;
-            }
+                None => {
+                    false
+                }
+            };
         }
         let fourth_bit = get_bit_at(number, 4);
         if !fourth_bit {
             // 1110xxxx 10xxxxxx 10xxxxxx
-            if idx + 2 < slice.len() {
-                if slice[idx + 1..idx + 3].iter().all(|f| is_10x(*f)) {
-                    idx += 3;
-                    continue;
+            return match (iter.next(), iter.next()) {
+                (Some(&i1), Some(&i2)) => {
+                    if is_10x(i1) && is_10x(i2) {
+                        continue;
+                    }
+                    false
                 }
-                return false;
-            } else {
-                return false;
-            }
+                _ => {
+                    false
+                }
+            };
         }
         let fifth_bit = get_bit_at(number, 3);
         if fifth_bit {
             return false;
         }
-        if idx + 3 < slice.len() {
-            if slice[idx + 1..idx + 4].iter().all(|f| is_10x(*f)) {
-                idx += 4;
-                continue;
+        return match (iter.next(), iter.next(), iter.next()) {
+            (Some(&i1), Some(&i2),  Some(&i3)) => {
+                if is_10x(i1) && is_10x(i2) && is_10x(i3) {
+                    continue;
+                }
+                false
             }
-            return false;
-        } else {
-            return false;
-        }
+            _ => {
+                false
+            }
+        };
     }
     true
 }
