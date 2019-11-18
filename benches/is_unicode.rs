@@ -10,12 +10,10 @@ const RNG_SEED: [u8; 32] = [
     0, 0,
 ];
 
-const TEST_CHARS: [&str; 6] = [
+const TEST_CHARS: [&str; 4] = [
     "\u{0024}",
     "\u{00A2}",
     "\u{0939}",
-    "\u{20AC}",
-    "\u{D55C}",
     "\u{10348}",
 ];
 
@@ -45,7 +43,7 @@ fn bench(c: &mut Criterion) {
             b.iter(|| fast_unicode::simple::is_unicode(*i))
         });
         group.bench_with_input(BenchmarkId::new("Stdlib", bytes.len()), &bytes, |b, i| {
-            b.iter(||  fast_unicode::stdlib::is_unicode(*i))
+            b.iter(|| fast_unicode::stdlib::is_unicode(*i))
         });
         group.bench_with_input(BenchmarkId::new("iterators", bytes.len()), &bytes, |b, i| {
             b.iter(|| fast_unicode::iterators::is_unicode(*i))
@@ -53,40 +51,39 @@ fn bench(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("match_matrix", bytes.len()), &bytes, |b, i| {
             b.iter(|| fast_unicode::match_matrix::is_unicode(*i))
         });
-        group.bench_with_input(BenchmarkId::new("for_loop", bytes.len()), &bytes,|b, i| {
+        group.bench_with_input(BenchmarkId::new("for_loop", bytes.len()), &bytes, |b, i| {
             b.iter(|| fast_unicode::for_loop::is_unicode(*i))
         });
     }
-    group.finish()
+    group.finish();
 }
 
 fn cycles_benchmark(c: &mut Criterion<CyclesPerByte>) {
-    let mut rng: StdRng = SeedableRng::from_seed(RNG_SEED);
-
-    let test_data: String = (0..TEST_DATA_SIZE)
-        .map(|_| {
-            let idx = rng.gen_range(0, TEST_CHARS.len());
-            TEST_CHARS[idx]
-        })
-        .collect::<Vec<&str>>()
-        .join("");
-    let slice = test_data.as_bytes();
-
     let mut group = c.benchmark_group("cycles");
-    group.throughput(Throughput::Bytes(slice.len() as u64));
 
-    group.bench_function(BenchmarkId::new("simple", test_data.len()), |b| {
-        b.iter(|| fast_unicode::simple::is_unicode(slice))
-    });
-    group.bench_function(BenchmarkId::new("stdlib", test_data.len()), |b| {
-        b.iter(|| fast_unicode::stdlib::is_unicode(slice))
-    });
-    group.bench_function(BenchmarkId::new("iterators", test_data.len()), |b| {
-        b.iter(|| fast_unicode::iterators::is_unicode(slice))
-    });
-    group.bench_function(BenchmarkId::new("idiomatic", test_data.len()), |b| {
-        b.iter(|| fast_unicode::match_matrix::is_unicode(slice))
-    });
+    for test_char in TEST_CHARS.iter() {
+        let test_data: String = (0..100).map(|_| test_char.to_string()).collect();
+        let bytes = test_data.as_bytes();
+
+        group.throughput(Throughput::Bytes(bytes.len() as u64));
+
+        group.bench_with_input(BenchmarkId::new("Simple", test_char.len()), &bytes, |b, i| {
+            b.iter(|| fast_unicode::simple::is_unicode(*i))
+        });
+        group.bench_with_input(BenchmarkId::new("Stdlib", test_char.len()), &bytes, |b, i| {
+            b.iter(|| fast_unicode::stdlib::is_unicode(*i))
+        });
+        group.bench_with_input(BenchmarkId::new("iterators", test_char.len()), &bytes, |b, i| {
+            b.iter(|| fast_unicode::iterators::is_unicode(*i))
+        });
+        group.bench_with_input(BenchmarkId::new("match_matrix", test_char.len()), &bytes, |b, i| {
+            b.iter(|| fast_unicode::match_matrix::is_unicode(*i))
+        });
+        group.bench_with_input(BenchmarkId::new("for_loop", test_char.len()), &bytes, |b, i| {
+            b.iter(|| fast_unicode::for_loop::is_unicode(*i))
+        });
+    }
+    group.finish();
 }
 
 criterion_group!(
